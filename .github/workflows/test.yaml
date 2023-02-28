@@ -8,7 +8,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - name: start deployment
-      uses: test-0001/deployments@main
+      uses: bobheadxi/deployments@main
       id: deployment
       with:
         step: start
@@ -16,7 +16,7 @@ jobs:
         env: release
 
     - name: update deployment status
-      uses: test-0001/deployments@main
+      uses: bobheadxi/deployments@main
       if: always()
       with:
         step: finish
