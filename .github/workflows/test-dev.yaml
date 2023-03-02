@@ -1,0 +1,17 @@
+name: 'Deploy'
+
+on:
+  push:
+    branches:
+      - 'develop'
+
+jobs:
+  deploy:
+    environment:
+      name: Development
+
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v3.0.0
+      - run: echo 'Hello'
