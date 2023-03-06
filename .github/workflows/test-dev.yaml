@@ -7,8 +7,8 @@ on:
 
 jobs:
   deploy:
-    # environment:
-    #   name: Development
+    environment:
+      name: Development
 
     runs-on: ubuntu-latest
 
