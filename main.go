@@ -1,220 +1,287 @@
-package main
+// package main
 
-import (
-	"bytes"
-	"context"
-	"crypto/hmac"
-	"crypto/sha256"
-	"encoding/base64"
-	"encoding/json"
-	"fmt"
-	"io/ioutil"
-	"net/http"
-)
+// import (
+// 	"bytes"
+// 	"context"
+// 	"crypto/hmac"
+// 	"crypto/sha1"
+// 	"encoding/hex"
+// 	"log"
+// 	"encoding/json"
+// 	"encoding/base64"
+// 	"fmt"
+// 	"io/ioutil"
+// 	"net/http"
+// 	"os"
 
-const secretKey = "your_secret_key"
+// 	secretmanager "cloud.google.com/go/secretmanager/apiv1"
+// 	secretmanagerpb "google.golang.org/genproto/googleapis/cloud/secretmanager/v1"
+// )
 
-func main() {
-	ctx := context.Background()
-	// 送信先のイベントハンドラーのURL
-	url := "EVENT_HANDLER_URL"
+// // const secretKey = "your_secret_key"
 
-	// 送信するデータ
-	data := map[string]interface{}{
-		"event":   "my_custom_event",
-		"action":  "update",
-		"payload": map[string]interface{}{"key1": "value1", "key2": "value2"},
-		"source":  "sample",
-	}
+// var (
+// 	// secretKey 			 string
+// 	projectID      	 	 string
+// 	eventHandlerURL      string
+// )
 
-	// データをJSONにエンコードする
-	jsonData, err := json.Marshal(data)
-	if err != nil {
-		panic(err)
-	}
-
-	// client, err := idtoken.NewClient(ctx, url)
-	// if err != nil {
-	// 	log.Fatalf("Failed to create new client: %v", err)
-	// }
-
-	// HTTPリクエストを作成する
-	req, err := http.NewRequestWithContext(ctx, "POST", url, bytes.NewBuffer(jsonData))
-	if err != nil {
-		panic(err)
-	}
-
-	// 認証トークンを設定する
-	// ヘッダーを追加する
-	// req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", token))
-	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("Content-Length", fmt.Sprintf("%d", len(string(jsonData))))
-
-	// Generate the HMAC-SHA256 signature
-	mac := hmac.New(sha256.New, []byte(secretKey))
-	mac.Write(jsonData)
-	signature := base64.StdEncoding.EncodeToString(mac.Sum(nil))
-	req.Header.Set("X-Signature", signature)
-
-	// HTTPリクエストを送信する
-	resp, err := http.DefaultClient.Do(req)
-	if err != nil {
-		fmt.Println("Error making request:", err)
-		return
-	}
-
-	// HTTPレスポンスを読み込む
-	body, err := ioutil.ReadAll(resp.Body)
-	if err != nil {
-		panic(err)
-	}
-
-	defer resp.Body.Close()
-
-	// HTTPレスポンスを表示する
-	fmt.Println(string(body))
-}
-
-// 認証を必要とする
 // func main() {
-// 	ctx := context.Background()
+//  	projectID = os.Getenv("PROJECT_ID")
+// 	// secretKey = os.Getenv("SECRET")
+// 	eventHandlerURL = os.Getenv("WEBHOOK")
 
-// 	// 送信先のイベントハンドラーのURL
-// 	url := "example_event_handler"
+// 	payload := map[string]interface{}{"key1": "value1", "key2": "value2"}
+// 	payloadBytes, err := json.Marshal(payload)
+// 	if err != nil {
+// 		log.Fatalf("Failed to marshal payload: %v", err)
+// 	}
 
-// 	// 送信するデータ
+// 	// イベントデータを作成
 // 	data := map[string]interface{}{
-// 		"event":   "my_custom_event",
-// 		"action":  "update",
-// 		"payload": map[string]interface{}{"key1": "value1", "key2": "value2"},
-// 		"source":  "sample",
+// 		"event_type":  "sample",
+// 		"id":          "your-id",
+// 		"metadata":    "your-metadata",
+// 		"time_created": "your-time-created",
+// 		"msg_id":       "your-msg-id",
+// 		"source":      "sample",
+// 		"payload": 		map[string]interface{}{"key1": "value1", "key2": "value2"},
 // 	}
 
-// 	// データをJSONにエンコードする
-// 	jsonData, err := json.Marshal(data)
+// 	// イベントデータを JSON に変換
+// 	msg, err := json.Marshal(data)
+// 	if err != nil {
+// 		log.Fatalf("Failed to marshal message data: %v", err)
+// 	}
+
+// 	expectedSignature := "sha1="
+// 	secret, err := getSecret(projectID, "custom-ev-handler", "latest")
 // 	if err != nil {
 // 		panic(err)
 // 	}
 
-// 	// サービスアカウントの秘密鍵ファイルを読み込む
-// 	jsonKey, err := ioutil.ReadFile("key.json")
+// 	hashed := hmac.New(sha1.New, secret)
+// 	hashed.Write(msg)
+// 	expectedSignature += hex.EncodeToString(hashed.Sum(nil))
+
+// 	fmt.Println(expectedSignature)
+
+// 	// Pub/Sub形式のメッセージを作成
+// 	pubsubMessage := map[string]interface{}{
+// 		"attributes": map[string]interface{}{
+// 			// "headers": string(json.RawMessage(`{
+// 			// 	"Sample-Event": "` + data["event_type"].(string) + `",
+// 			// 	"Sample-Signature": "` + expectedSignature + `",
+// 			// 	"Content-Type": "application/json"
+// 			// }`)),
+// 			// "headers": string(json.RawMessage(`{
+// 			"Sample-Event": data["event_type"].(string),
+// 			"Sample-Signature": expectedSignature,
+// 			"Content-Type": "application/json",
+// 			// }`)),
+// 		},
+// 		"data":       base64.StdEncoding.EncodeToString(payloadBytes),
+// 		// "message": map[string]interface{}{
+// 		// 	"attributes": map[string]interface{}{
+// 		// 		// "headers": string(json.RawMessage(`{
+// 		// 		// 	"Sample-Event": "` + data["event_type"].(string) + `",
+// 		// 		// 	"Sample-Signature": "` + expectedSignature + `",
+// 		// 		// 	"Content-Type": "application/json"
+// 		// 		// }`)),
+// 		// 		// "headers": string(json.RawMessage(`{
+// 		// 		"Sample-Event": data["event_type"].(string),
+// 		// 		"Sample-Signature": expectedSignature,
+// 		// 		"Content-Type": "application/json",
+// 		// 		// }`)),
+// 		// 	},
+// 		// 	"data":       base64.StdEncoding.EncodeToString(payloadBytes),
+// 		// 	"message_id": data["msg_id"].(string),
+// 		// },
+// 	}
+
+// 	pubsubMessageBytes, err := json.Marshal(pubsubMessage)
+// 	if err != nil {
+// 		log.Fatalf("Failed to marshal pubsub message data: %v", err)
+// 	}
+
+// 	// HTTP リクエストを作成
+// 	req, err := http.NewRequest("POST", eventHandlerURL, bytes.NewBuffer(pubsubMessageBytes))
 // 	if err != nil {
 // 		panic(err)
 // 	}
-
-// 	// OAuth2の設定を作成する
-// 	config, err := google.ConfigFromJSON(jsonKey, "https://www.googleapis.com/auth/cloud-platform", "https://www.googleapis.com/auth/compute")
-// 	if err != nil {
-// 		panic(err)
-// 	}
-
-// 	// 認証コードを取得するためのURLを生成する
-// 	authURL := config.AuthCodeURL("state-token", oauth2.AccessTypeOffline)
-
-// 	// 認証コードを取得するための誘導
-// 	fmt.Printf("Access the following URL and input the authorization code: %v\n", authURL)
-// 	fmt.Print("Authorization Code: ")
-// 	var code string
-// 	fmt.Scanln(&code)
-
-// 	// 認証コードを用いてアクセストークンを取得する
-// 	token, err := config.Exchange(ctx, code)
-// 	if err != nil {
-// 		panic(err)
-// 	}
-
-// 	client := config.Client(ctx, token)
-
-// 	// OAuth2のクライアントを作成する
-
-// 	// HTTPリクエストを作成する
-// 	req, err := http.NewRequestWithContext(ctx, "POST", url, bytes.NewBuffer(jsonData))
-// 	if err != nil {
-// 		panic(err)
-// 	}
-
-// 	// 認証トークンを設定する
-// 	req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", token.AccessToken))
-
-// 	// ヘッダーを追加する
 // 	req.Header.Set("Content-Type", "application/json")
-// 	req.Header.Set("Content-Length", fmt.Sprintf("%d", len(jsonData)))
-
-// 	// httpClient := &http.Client{}
-
-// 	// HTTPリクエストを送信する
+// 	req.Header.Set("Sample-Event", data["event_type"].(string))
+// 	req.Header.Set("Sample-Signature", expectedSignature)
+// 	req.Header.Set("User-Agent", "sample") // イベントハンドラが受信を許可するソースを設定
+// 	fmt.Println(req)
+// 	// HTTP クライアントを作成してリクエストを送信
+// 	client := &http.Client{}
 // 	resp, err := client.Do(req)
 // 	if err != nil {
 // 		panic(err)
 // 	}
 // 	defer resp.Body.Close()
 
-// 	// HTTPレスポンスを読み込む
-// 	body, err := ioutil.ReadAll(resp.Body)
+// 	// レスポンスを表示
+// 	fmt.Printf("Status: %s\n", resp.Status)
+
+// 	respBody, err := ioutil.ReadAll(resp.Body)
 // 	if err != nil {
 // 		panic(err)
 // 	}
-
-// 	// HTTPレスポンスを表示する
-// 	fmt.Println(string(body))
+// 	fmt.Println("Response Body:", string(respBody))
 // }
 
-// // 認証不要
-// func main() {
+// func getSecret(projectID, secretName, versionNum string) ([]byte, error) {
 // 	ctx := context.Background()
-
-// 	// 送信先のCloud RunのURL
-// 	url := "example_event_handler"
-
-// 	// 送信するデータ
-// 	data := map[string]interface{}{
-// 		"event":   "my_custom_event",
-// 		"action":  "update",
-// 		"payload": map[string]interface{}{"key1": "value1", "key2": "value2"},
-// 		"source":  "sample",
-// 	}
-
-// 	// データをJSONにエンコードする
-// 	jsonData, err := json.Marshal(data)
+// 	client, err := secretmanager.NewClient(ctx)
 // 	if err != nil {
-// 		panic(err)
+// 		return nil, err
+// 	}
+// 	defer client.Close()
+
+// 	req := &secretmanagerpb.AccessSecretVersionRequest{
+// 		Name: "projects/" + projectID + "/secrets/" + secretName + "/versions/" + versionNum,
 // 	}
 
-// 	// Google Cloudの認証を行う
-// 	client, err := google.DefaultClient(oauth2.NoContext, "https://www.googleapis.com/auth/cloud-platform")
+// 	result, err := client.AccessSecretVersion(ctx, req)
 // 	if err != nil {
-// 		panic(err)
+// 		return nil, err
 // 	}
 
-// 	// HTTPリクエストを作成する
-// 	req, err := http.NewRequestWithContext(ctx, "POST", url, bytes.NewBuffer(jsonData))
-// 	if err != nil {
-// 		panic(err)
-// 	}
-
-//     // 認証トークンを設定する
-//     _, err = client.Transport.(*oauth2.Transport).RoundTrip(req)
-//     if err != nil {
-//         panic(err)
-//     }
-
-// 	// ヘッダーを追加する
-// 	req.Header.Set("Content-Type", "application/json")
-// 	req.Header.Set("Content-Length", fmt.Sprintf("%d", len(jsonData)))
-
-// 	// HTTPリクエストを送信する
-// 	resp, err := http.DefaultClient.Do(req)
-// 	if err != nil {
-// 		panic(err)
-// 	}
-// 	defer resp.Body.Close()
-
-// 	// HTTPレスポンスを読み込む
-// 	body, err := ioutil.ReadAll(resp.Body)
-// 	if err != nil {
-// 		panic(err)
-// 	}
-
-// 	// HTTPレスポンスを表示する
-// 	fmt.Println(string(body))
+// 	return result.Payload.Data, nil
 // }
+
+package main
+
+import (
+	"bytes"
+	"context"
+	"crypto/hmac"
+	"crypto/sha1"
+	"encoding/base64"
+	"encoding/hex"
+	"encoding/json"
+	"log"
+	"net/http"
+	"os"
+
+	secretmanager "cloud.google.com/go/secretmanager/apiv1"
+	"cloud.google.com/go/secretmanager/apiv1/secretmanagerpb"
+)
+
+type Payload struct {
+	CreatedAt  string `json:"created_at"`
+	UpdatedAt  string `json:"updated_at"`
+	Repository struct {
+		Name string `json:"name"`
+		Url  string `json:"url"`
+	} `json:"repository"`
+}
+
+type SampleEvent struct {
+	EventType   string  `json:"event_type"`
+	ID          string  `json:"id"`
+	Metadata    string  `json:"metadata"`
+	TimeCreated string  `json:"time_created"`
+	Signature   string  `json:"signature"`
+	MsgID       string  `json:"msg_id"`
+	Source      string  `json:"source"`
+	Payload     Payload `json:"payload"`
+}
+
+var (
+	projectID       string
+	eventHandlerURL string
+)
+
+func main() {
+	projectID = os.Getenv("PROJECT_ID")
+	eventHandlerURL = os.Getenv("WEBHOOK")
+
+	payload := Payload{
+		CreatedAt: "2022-03-27T09:00:00Z",
+		Repository: struct {
+			Name string `json:"name"`
+			Url  string `json:"url"`
+		}{
+			Name: "example-repo",
+			Url:  "https://github.com/example/repo",
+		},
+	}
+
+	// イベントデータを作成
+	data := SampleEvent{
+		EventType:   "sample",
+		ID:          "your-id",
+		Metadata:    "your-metadata",
+		TimeCreated: "your-time-created",
+		MsgID:       "your-msg-id",
+		Source:      "sample",
+		Payload:     payload,
+	}
+
+	// イベントデータを JSON に変換
+	msg, err := json.Marshal(data)
+	if err != nil {
+		log.Fatalf("Failed to marshal message data: %v", err)
+	}
+
+	// ハッシュ値を生成
+	expectedSignature := "sha1="
+	secret, err := getSecret(projectID, "custom-ev-handler", "latest")
+	if err != nil {
+		panic(err)
+	}
+
+	hashed := hmac.New(sha1.New, secret)
+	hashed.Write(msg)
+	expectedSignature += hex.EncodeToString(hashed.Sum(nil))
+
+	// Pub/Sub形式のメッセージを作成
+	pubsubMessage := map[string]interface{}{
+		"attributes": map[string]interface{}{
+			"Sample-Event":     data.EventType,
+			"Sample-Signature": expectedSignature,
+			"Content-Type":     "application/json",
+		},
+		"data": base64.StdEncoding.EncodeToString(msg),
+	}
+
+	pubsubMessageBytes, err := json.Marshal(pubsubMessage)
+	if err != nil {
+		log.Fatalf("Failed to marshal pubsub message data: %v", err)
+	}
+
+	// HTTP リクエストを作成
+	req, err := http.NewRequest("POST", eventHandlerURL, bytes.NewBuffer(pubsubMessageBytes))
+	if err != nil {
+		panic(err)
+	}
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Sample-Event", data.EventType)
+	req.Header.Set("Sample-Signature", expectedSignature)
+	req.Header.Set("User-Agent", "sample")
+
+
+}
+
+func getSecret(projectID, secretName, versionNum string) ([]byte, error) {
+	ctx := context.Background()
+	client, err := secretmanager.NewClient(ctx)
+	if err != nil {
+		return nil, err
+	}
+	defer client.Close()
+
+	req := &secretmanagerpb.AccessSecretVersionRequest{
+		Name: "projects/" + projectID + "/secrets/" + secretName + "/versions/" + versionNum,
+	}
+
+	result, err := client.AccessSecretVersion(ctx, req)
+	if err != nil {
+		return nil, err
+	}
+
+	return result.Payload.Data, nil
+}
