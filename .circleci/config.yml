@@ -33,7 +33,7 @@ jobs:
       - run:
           name: Send Webhook to Cloud Run
           command: |
-            curl -X POST -H "Content-Type: application/json" --data '{"event": "build", "status": "success"}' $WEBHOOK_ENDPOINT
+            curl -X POST -H "Content-Type: application/json" --data '{"event": "circleci-build", "status": "success"}' $WEBHOOK_ENDPOINT
 workflows:
   version: 2
   build-deploy:
